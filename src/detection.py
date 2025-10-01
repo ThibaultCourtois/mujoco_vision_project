@@ -31,7 +31,8 @@ def detection(DETECTION_INPUT_DIR, DETECTION_OUTPUT_DIR):
             "cyan": cyan_mask,
             "green": green_mask,
         }
-
+        
+        # calculating complementary colors for display purpose
         complementary_colors = {}
         for name, mask in masks.items():
             mean_val = cv.mean(img, mask)

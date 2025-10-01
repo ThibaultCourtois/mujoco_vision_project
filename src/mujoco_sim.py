@@ -8,7 +8,7 @@ def mujoco_sim(MUJOCO_XML_PATH, MUJOCO_OUTPUT_DIR):
         m = mj.MjModel.from_xml_path(str(MUJOCO_XML_PATH))
     except Exception as e:
         print(f"Error while loading XML model: {e}")
-        return 1
+        return None
 
     d = mj.MjData(m)
     r = mj.Renderer(m, height=480, width=640)
