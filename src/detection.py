@@ -1,14 +1,24 @@
 import cv2 as cv
 from PIL import Image
 import numpy as np
-
+import json
+from pathlib import Path
 
 def detection(DETECTION_INPUT_DIR, DETECTION_OUTPUT_DIR):
     image_files = sorted(DETECTION_INPUT_DIR.glob("*.png"))
     print(f"Starting color detection on {len(image_files)} images")
 
+    trajectory = []
+
     for image_path in image_files:
         img = cv.imread(str(image_path))
+
+        # frame, timestamp extraction
+        img_name = Path(image_path).name
+        _, frame_str, time_str = img_name.split('_')
+        frame = int(frame_str)
+        timestamp = float(time_str[1:-5])
+
 
         if img is None:
             print(f"Error reading {image_path}")
@@ -16,20 +26,20 @@ def detection(DETECTION_INPUT_DIR, DETECTION_OUTPUT_DIR):
 
         hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
-        red_mask_1 = cv.inRange(hsv, np.array([0, 70, 90]), np.array([3, 255, 255]))
-        red_mask_2 = cv.inRange(hsv, np.array([175, 70, 90]), np.array([180, 255, 255]))
+        red_mask_1 = cv.inRange(hsv, np.array([0, 10, 10]), np.array([3, 255, 255]))
+        red_mask_2 = cv.inRange(hsv, np.array([175, 10, 10]), np.array([180, 255, 255]))
 
         red_mask = cv.bitwise_or(red_mask_1, red_mask_2)
 
-        blue_mask = cv.inRange(hsv, np.array([100, 70, 90]), np.array([130, 255, 255]))
-        cyan_mask = cv.inRange(hsv, np.array([80, 70, 90]), np.array([100, 255, 255]))
-        green_mask = cv.inRange(hsv, np.array([40, 70, 90]), np.array([80, 255, 255]))
+#        blue_mask = cv.inRange(hsv, np.array([100, 70, 90]), np.array([130, 255, 255]))
+#        cyan_mask = cv.inRange(hsv, np.array([80, 70, 90]), np.array([100, 255, 255]))
+#        green_mask = cv.inRange(hsv, np.array([40, 70, 90]), np.array([80, 255, 255]))
 
         masks = {
             "red": red_mask,
-            "blue": blue_mask,
-            "cyan": cyan_mask,
-            "green": green_mask,
+#            "blue": blue_mask,
+#            "cyan": cyan_mask,
+#            "green": green_mask,
         }
         
         # calculating complementary colors for display purpose
@@ -39,9 +49,11 @@ def detection(DETECTION_INPUT_DIR, DETECTION_OUTPUT_DIR):
             assert isinstance(mean_val, tuple), "cv.mean should return a tuple"
             complementary_colors[name] = (int(255 - mean_val[0]), int(255 - mean_val[1]), int(255 - mean_val[2]))
 
-        combined_mask = cv.bitwise_or(
-            cv.bitwise_or(red_mask, blue_mask), cv.bitwise_or(cyan_mask, green_mask)
-        )
+#        combined_mask = cv.bitwise_or(
+#            cv.bitwise_or(red_mask, blue_mask), cv.bitwise_or(cyan_mask, green_mask)
+#        )
+
+        combined_mask = red_mask
 
         # kernel = np.ones((3, 3), dtype=np.uint8)
         # red_mask = cv.morphologyEx(red_mask, cv.MORPH_CLOSE, kernel)
@@ -54,6 +66,16 @@ def detection(DETECTION_INPUT_DIR, DETECTION_OUTPUT_DIR):
             (M["m10"] / (M["m00"] + 1e-5), M["m01"] / (M["m00"] + 1e-5))
             for M in moment_list
         ]
+
+        #json encoding
+        image_data = {
+            'frame': frame,
+            'timestamp': timestamp,
+            'centroid': [int(centroid_list[0][0]), int(centroid_list[0][1])],
+            'color':'red',
+        }
+        
+        trajectory.append(image_data)
 
         processed_img = img
 
@@ -84,4 +106,10 @@ def detection(DETECTION_INPUT_DIR, DETECTION_OUTPUT_DIR):
         print(f"Image saved : {processed_img_path}")
 
     print(f"Detection finished, results saved at {DETECTION_OUTPUT_DIR}")
+
+    with open(DETECTION_OUTPUT_DIR / 'trajectory.json', 'w') as f:
+        json.dump(trajectory, f, indent=2)
+
+    print('Json trajectory file saved')
+        
     return DETECTION_OUTPUT_DIR
